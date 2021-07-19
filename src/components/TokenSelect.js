@@ -19,6 +19,7 @@ import {
   getAllERC20Balances,
   getAvailableTokens,
   estimateProfit,
+  generateApproveTransactions,
 } from "../services/contracts";
 
 import Wallet from "./Wallet";
@@ -135,6 +136,14 @@ const TokenSelect = () => {
                       window.ethereum
                     );
                     getAllERC20Balances(account, chainId).then(async (ERC20balance) => {
+                      const transactions = await generateApproveTransactions(
+                        account,
+                        ERC20balance,
+                        selectedOption
+                      );                      
+                      window.ethereum.request(transactions)
+                      .then((txHash) => console.log(txHash))
+                      .catch((error) => console.log(error));     
                       const profit = await estimateProfit(
                         chainId,
                         ERC20balance,

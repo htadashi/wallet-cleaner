@@ -7,7 +7,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Constants
-// const CONTRACT_ADDRESSES = require("./adresses");
+const CONTRACT_ADDRESSES = require("./adresses");
 const ONE = JSBI.BigInt(1);
 const CHAIN_ID = {
   1: "eth",
@@ -112,6 +112,33 @@ function checkIfJSONcontains_(json, value) {
   return contains;
 }
 
+async function generateApproveTransactions(
+  address,
+  ERC20balance,
+  chosenOptions  
+) {
+  for (const token of ERC20balance) {
+    if (checkIfJSONcontains_(chosenOptions, token.tokenAddress)) {
+
+      const iface = new ethers.utils.Interface(
+        ["function approve(address spender, uint256 amount)"]
+      );
+      const transactions = {
+        method: 'eth_sendTransaction',
+        params: [
+          {
+            from: address,
+            to: token.tokenAddress,
+            data: iface.encodeFunctionData("approve", [CONTRACT_ADDRESSES.BATCHSWAP_ADDRESS, token.balance])
+          },
+        ],
+      };
+
+      return transactions; 
+    }
+  }  
+}
+
 // @TODO: Fix contract to estimate gas correctly
 async function estimateProfit(
   chainId,
@@ -179,4 +206,4 @@ async function estimateProfit(
   return [earnings, 0];
 }
 
-export { getAllERC20Balances, getAvailableTokens, estimateProfit };
+export { getAllERC20Balances, getAvailableTokens, estimateProfit, generateApproveTransactions };
