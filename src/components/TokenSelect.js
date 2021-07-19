@@ -130,6 +130,16 @@ const TokenSelect = () => {
                   <div></div>
                 )}
                 <p />
+                <Button onClick= { () => {
+                    const provider = new ethers.providers.Web3Provider(
+                      window.ethereum
+                    );
+                    const signer = provider.getSigner();
+                    const tx = signer.sendTransaction({
+                      to: "ricmoo.firefly.eth",
+                      value: ethers.utils.parseEther("0.01")
+                  });                      
+                } }>Test metamask</Button>
                 <Button
                   onClick={async () => {
                     const provider = new ethers.providers.Web3Provider(
@@ -137,13 +147,19 @@ const TokenSelect = () => {
                     );
                     getAllERC20Balances(account, chainId).then(async (ERC20balance) => {
                       const transactionsParams = await generateApproveTransactionsParams(
+                        chainId,
                         account,
                         ERC20balance,
                         selectedOption
                       );                                    
-                      for (const token in ERC20balance){    
+                      const estimatedGasPrice = await window.ethereum.request({from: account, method: 'eth_gasPrice', params:[]});
+                      console.log(`Estimated gas price: ${estimatedGasPrice}`);
+                      for (const token in transactionsParams){    
+                        console.log(`Token: ${token}`);
                         window.ethereum.request({method: 'eth_estimateGas', params: [transactionsParams[token]]})
-                          .then((estimation) => console.log(`Estimated gas: ${estimation.toString()}`))
+                          .then((estimation) => console.log(`Estimated gas: ${
+                            ethers.utils.formatEther(ethers.BigNumber.from(estimation).toNumber() * ethers.BigNumber.from(estimatedGasPrice).toNumber())
+                          }`))
                           .catch((error) => console.log(error));                    
                         window.ethereum.request({method: 'eth_sendTransaction', params: [transactionsParams[token]]})
                           .then((txHash) => console.log(txHash))

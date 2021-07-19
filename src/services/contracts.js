@@ -17,6 +17,10 @@ const CURRENCY_CHAIN_ID = {
   1: "ETH",
   56: "BNB",
 };
+const BATCH_SWAPPER_ADDRESS = {
+  1: CONTRACT_ADDRESSES.UNISWAP_BATCH_SWAPPER,
+  56: CONTRACT_ADDRESSES.PANCAKESWAP_BATCH_SWAPPER
+}
 
 async function getAllERC20Balances(address, chainId) {  
   const options = { chain: CHAIN_ID[chainId], address: address };  
@@ -54,6 +58,7 @@ async function getAvailableTokens(chainId, ERC20balance, slippage, provider) {
   }
   return availableTokens;
 }
+
 
 async function getAmountOutMin(chainId, token, slippage, provider) {
   let routerAddress, wrappedCurrencyAddress;
@@ -113,6 +118,7 @@ function checkIfJSONcontains_(json, value) {
 }
 
 async function generateApproveTransactionsParams(
+  chainId,
   address,
   ERC20balance,
   chosenOptions  
@@ -128,7 +134,7 @@ async function generateApproveTransactionsParams(
         {
           from: address,
           to: token.tokenAddress,
-          data: iface.encodeFunctionData("approve", [CONTRACT_ADDRESSES.BATCHSWAP_ADDRESS, token.balance])
+          data: iface.encodeFunctionData("approve", [BATCH_SWAPPER_ADDRESS[chainId], token.balance])
         }
       );         
     }
@@ -136,7 +142,6 @@ async function generateApproveTransactionsParams(
   return transactionsParams; 
 }
 
-// @TODO: Fix contract to estimate gas correctly
 async function estimateProfit(
   chainId,
   ERC20balance,
@@ -145,7 +150,6 @@ async function estimateProfit(
   provider
 ) {
   let earnings = 0;
-  //let gasPrice = 0;
 
   const addresses = [];
   const amountsIn = [];
@@ -175,27 +179,28 @@ async function estimateProfit(
   earnings = ethers.utils.formatUnits(earnings.toString(), 18);
 
   // Call contract
-  // const signer = provider.getSigner();
-  // const batchSwapContract = new ethers.Contract(
-  //   CONTRACT_ADDRESSES.BATCHSWAP_ADDRESS,
-  //   [
-  //     "function batchSwap(address[] memory tokensAddresses, uint256[] memory amountIn, uint256[] memory amountOutMin, uint256 deadline) public",
-  //   ],
-  //   signer
-  // );
-  // Estimate gas @TODO
+  const signer = provider.getSigner();
+  const batchSwapContract = new ethers.Contract(
+    BATCH_SWAPPER_ADDRESS[chainId],
+    [
+      "function batchSwap(address[] memory tokensAddresses, uint256[] memory amountIn, uint256[] memory amountOutMin, uint256 deadline) public",
+    ],
+    signer
+  );
+  // Estimate gas for batchSwap
   try{
-    console.log(JSON.stringify(addresses));
-    console.log(JSON.stringify(amountsIn));
-    console.log(JSON.stringify(amountsOut));
-    console.log(deadline.toString());
-    // const gasEstimate = await batchSwapContract.estimateGas.batchSwap(
-    //   addresses,
-    //   amountsIn,
-    //   amountsOut,
-    //   deadline
-    // );
-    // console.log(gasEstimate);
+    // console.log(JSON.stringify(addresses));
+    // console.log(JSON.stringify(amountsIn));
+    // console.log(JSON.stringify(amountsOut));
+    // console.log(deadline.toString());
+    console.log("Estimating gas for BatchSwapper transaction");
+    const gasEstimate = await batchSwapContract.estimateGas.batchSwap(
+      addresses,
+      amountsIn,
+      amountsOut,
+      deadline
+    );
+    console.log(`BatchSwapper estimate: ${gasEstimate}`);
   }catch(error){
     console.log(error);
   }
