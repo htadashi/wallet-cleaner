@@ -19,6 +19,7 @@ import {
   getAllERC20Balances,
   getAvailableTokens,
   estimateProfit,
+  gasFeeEstimation,
   generateApproveTransactionsParams,
 } from "../services/contracts";
 
@@ -33,7 +34,7 @@ const TokenSelect = () => {
   const [slippage, setSlippage] = useState("10");
   const [loadingPrices, setLoadingPrices] = useState(false);
   const [options, setOptions] = useState([]);
-  const [gasPrice, setGasPrice] = useState("");
+  const [gasCosts, setGasCosts] = useState(0);
   const [totalEarning, setTotalEarning] = useState(0);
   const [swapButtonText, setSwapButtonText] = useState(
     "Please connect to wallet"
@@ -130,21 +131,12 @@ const TokenSelect = () => {
                   <div></div>
                 )}
                 <p />
-                <Button onClick= { () => {
-                    const provider = new ethers.providers.Web3Provider(
-                      window.ethereum
-                    );
-                    const signer = provider.getSigner();
-                    const tx = signer.sendTransaction({
-                      to: "ricmoo.firefly.eth",
-                      value: ethers.utils.parseEther("0.01")
-                  });                      
-                } }>Test metamask</Button>
                 <Button
                   onClick={async () => {
                     const provider = new ethers.providers.Web3Provider(
                       window.ethereum
                     );
+                    const signer = provider.getSigner();
                     getAllERC20Balances(account, chainId).then(async (ERC20balance) => {
                       const transactionsParams = await generateApproveTransactionsParams(
                         chainId,
@@ -152,18 +144,13 @@ const TokenSelect = () => {
                         ERC20balance,
                         selectedOption
                       );                                    
-                      const estimatedGasPrice = await window.ethereum.request({from: account, method: 'eth_gasPrice', params:[]});
-                      console.log(`Estimated gas price: ${estimatedGasPrice}`);
+                      const estimatedGasPrice = await signer.getGasPrice();
                       for (const token in transactionsParams){    
-                        console.log(`Token: ${token}`);
-                        window.ethereum.request({method: 'eth_estimateGas', params: [transactionsParams[token]]})
-                          .then((estimation) => console.log(`Estimated gas: ${
-                            ethers.utils.formatEther(ethers.BigNumber.from(estimation).toNumber() * ethers.BigNumber.from(estimatedGasPrice).toNumber())
-                          }`))
-                          .catch((error) => console.log(error));                    
-                        window.ethereum.request({method: 'eth_sendTransaction', params: [transactionsParams[token]]})
-                          .then((txHash) => console.log(txHash))
-                          .catch((error) => console.log(error));     
+                        const gasEstimate = await signer.estimateGas(transactionsParams[token]);
+                        console.log(`Gas fee estimate (ETH): ${gasFeeEstimation(estimatedGasPrice, gasEstimate)}`);
+                        signer.sendTransaction(transactionsParams[token])
+                        .then(txHash => console.log(txHash))
+                        .catch(error => console.log(error))                        
                       }
                       const profit = await estimateProfit(
                         chainId,
@@ -173,15 +160,15 @@ const TokenSelect = () => {
                         provider
                       );
                       setTotalEarning(profit[0]);
-                      setGasPrice(profit[1]);
+                      setGasCosts(profit[1]);
                     });
                   }}
                 >
                   {swapButtonText}
                 </Button>
                 <p />
-                💰 <b>Total ETH to receive:</b> {totalEarning}
-                <br />⛽ <b>Estimated gas price:</b> {gasPrice}
+                💰 <b>Total to receive:</b> {totalEarning} ETH
+                <br />⛽ <b>Estimated gas costs:</b> {gasCosts} ETH
               </Card.Body>
             </Card>
           </Col>

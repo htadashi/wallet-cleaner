@@ -142,6 +142,10 @@ async function generateApproveTransactionsParams(
   return transactionsParams; 
 }
 
+async function gasFeeEstimation(gasPrice, gasEstimate){
+  return ethers.utils.formatEther(gasEstimate.toNumber()*gasPrice.toNumber());
+}
+
 async function estimateProfit(
   chainId,
   ERC20balance,
@@ -150,7 +154,8 @@ async function estimateProfit(
   provider
 ) {
   let earnings = 0;
-
+  let gasCostEstimate = 0;
+  
   const addresses = [];
   const amountsIn = [];
   const amountsOut = [];
@@ -200,12 +205,14 @@ async function estimateProfit(
       amountsOut,
       deadline
     );
-    console.log(`BatchSwapper estimate: ${gasEstimate}`);
+    const estimatedGasPrice = await signer.getGasPrice();
+    gasCostEstimate = await gasFeeEstimation(estimatedGasPrice, gasEstimate);
+    console.log(`BatchSwapper cost estimate (ETH): ${gasCostEstimate}`);
   }catch(error){
     console.log(error);
   }
 
-  return [earnings, 0];
+  return [earnings, gasCostEstimate];
 }
 
-export { getAllERC20Balances, getAvailableTokens, estimateProfit, generateApproveTransactionsParams };
+export { getAllERC20Balances, getAvailableTokens, estimateProfit, gasFeeEstimation, generateApproveTransactionsParams };
