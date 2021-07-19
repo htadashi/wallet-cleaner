@@ -112,31 +112,28 @@ function checkIfJSONcontains_(json, value) {
   return contains;
 }
 
-async function generateApproveTransactions(
+async function generateApproveTransactionsParams(
   address,
   ERC20balance,
   chosenOptions  
 ) {
+  const transactionsParams = [];
+  const iface = new ethers.utils.Interface(
+    ["function approve(address spender, uint256 amount)"]
+  );
   for (const token of ERC20balance) {
     if (checkIfJSONcontains_(chosenOptions, token.tokenAddress)) {
 
-      const iface = new ethers.utils.Interface(
-        ["function approve(address spender, uint256 amount)"]
-      );
-      const transactions = {
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: address,
-            to: token.tokenAddress,
-            data: iface.encodeFunctionData("approve", [CONTRACT_ADDRESSES.BATCHSWAP_ADDRESS, token.balance])
-          },
-        ],
-      };
-
-      return transactions; 
+      transactionsParams.push(
+        {
+          from: address,
+          to: token.tokenAddress,
+          data: iface.encodeFunctionData("approve", [CONTRACT_ADDRESSES.BATCHSWAP_ADDRESS, token.balance])
+        }
+      );         
     }
   }  
+  return transactionsParams; 
 }
 
 // @TODO: Fix contract to estimate gas correctly
@@ -206,4 +203,4 @@ async function estimateProfit(
   return [earnings, 0];
 }
 
-export { getAllERC20Balances, getAvailableTokens, estimateProfit, generateApproveTransactions };
+export { getAllERC20Balances, getAvailableTokens, estimateProfit, generateApproveTransactionsParams };

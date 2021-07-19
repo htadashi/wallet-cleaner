@@ -19,7 +19,7 @@ import {
   getAllERC20Balances,
   getAvailableTokens,
   estimateProfit,
-  generateApproveTransactions,
+  generateApproveTransactionsParams,
 } from "../services/contracts";
 
 import Wallet from "./Wallet";
@@ -136,14 +136,19 @@ const TokenSelect = () => {
                       window.ethereum
                     );
                     getAllERC20Balances(account, chainId).then(async (ERC20balance) => {
-                      const transactions = await generateApproveTransactions(
+                      const transactionsParams = await generateApproveTransactionsParams(
                         account,
                         ERC20balance,
                         selectedOption
-                      );                      
-                      window.ethereum.request(transactions)
-                      .then((txHash) => console.log(txHash))
-                      .catch((error) => console.log(error));     
+                      );                                    
+                      for (const token in ERC20balance){    
+                        window.ethereum.request({method: 'eth_estimateGas', params: [transactionsParams[token]]})
+                          .then((estimation) => console.log(`Estimated gas: ${estimation.toString()}`))
+                          .catch((error) => console.log(error));                    
+                        window.ethereum.request({method: 'eth_sendTransaction', params: [transactionsParams[token]]})
+                          .then((txHash) => console.log(txHash))
+                          .catch((error) => console.log(error));     
+                      }
                       const profit = await estimateProfit(
                         chainId,
                         ERC20balance,
